@@ -11,7 +11,9 @@ const NAV = [
   { href: '/dashboard/projects',      label: 'Projects',      icon: <ProjectsIcon /> },
   { href: '/dashboard/announcements', label: 'Announcements', icon: <AnnIcon /> },
   { href: '/dashboard/people',        label: 'People',        icon: <PeopleIcon /> },
-  { href: '/dashboard/admin',         label: 'Admin',         icon: <AdminIcon />, adminOnly: true },
+  { href: '/dashboard/reports', label: 'Site Reports', icon: <ReportsIcon /> },
+  { href: '/dashboard/documents', label: 'Documents', icon: <DocsIcon /> },
+  { href: '/dashboard/admin', label: 'Admin', icon: <AdminIcon />, adminOnly: true },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -176,4 +178,12 @@ function PeopleIcon() {
 }
 function AdminIcon() {
   return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1l1.8 3.6L14 5.5l-3 2.9.7 4.1L8 10.5l-3.7 2 .7-4.1-3-2.9 4.2-.9L8 1Z" fill="currentColor"/></svg>
+}
+// Navigation updated via direct file edit below
+
+function ReportsIcon() {
+  return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="2" width="14" height="12" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M4 6h8M4 9h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+}
+function DocsIcon() {
+  return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 1h6l4 4v9a1 1 0 01-1 1H3a1 1 0 01-1-1V2a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.5"/><path d="M9 1v4h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
 }

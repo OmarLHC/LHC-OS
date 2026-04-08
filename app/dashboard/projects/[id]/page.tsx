@@ -23,7 +23,7 @@ export default function ProjectPage() {
   const [members, setMembers] = useState<Profile[]>([])
   const [allProfiles, setAllProfiles] = useState<Profile[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
-  const [view, setView] = useState<'kanban' | 'list'>('kanban')
+  const [view, setView] = useState<'kanban' | 'list' | 'gantt'>('kanban')
   const [showNewTask, setShowNewTask] = useState(false)
   const [newTaskCol, setNewTaskCol] = useState('todo')
   const [dragTask, setDragTask] = useState<string | null>(null)
@@ -410,6 +410,90 @@ function NewTaskModal({ projectId, defaultStatus, profiles, departments, onClose
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  )
+}
+
+export function GanttView({ tasks, project }: { tasks: any[], project: any }) {
+  if (!tasks.length) return (
+    <div style={{ padding: '40px', textAlign: 'center', color: '#B4B4B5' }}>No tasks with deadlines to show on timeline.</div>
+  )
+
+  const tasksWithDates = tasks.filter(t => t.deadline)
+  if (!tasksWithDates.length) return (
+    <div style={{ padding: '40px', textAlign: 'center', color: '#B4B4B5' }}>Add deadlines to tasks to see the Gantt timeline.</div>
+  )
+
+  const allDates = tasksWithDates.map(t => new Date(t.deadline))
+  const startDate = project.start_date ? new Date(project.start_date) : new Date(Math.min(...allDates.map(d => d.getTime())))
+  const endDate = project.deadline ? new Date(project.deadline) : new Date(Math.max(...allDates.map(d => d.getTime())))
+  const totalDays = Math.max((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24), 1)
+
+  const STATUS_COLORS: Record<string, string> = {
+    todo: '#B4B4B5', in_progress: '#FFCB1A', review: '#185FA5', done: '#0F6E56'
+  }
+
+  // Generate week markers
+  const weeks: { label: string; left: number }[] = []
+  const cur = new Date(startDate)
+  while (cur <= endDate) {
+    const left = ((cur.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) / totalDays * 100
+    weeks.push({ label: format(cur, 'MMM d'), left })
+    cur.setDate(cur.getDate() + 7)
+  }
+
+  const today = new Date()
+  const todayLeft = ((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) / totalDays * 100
+
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <div style={{ minWidth: '600px' }}>
+        {/* Week labels */}
+        <div style={{ position: 'relative', height: '28px', marginBottom: '4px', marginLeft: '200px' }}>
+          {weeks.map((w, i) => (
+            <div key={i} style={{ position: 'absolute', left: `${w.left}%`, fontSize: '11px', color: '#B4B4B5', whiteSpace: 'nowrap' }}>{w.label}</div>
+          ))}
+        </div>
+        {/* Tasks */}
+        {tasksWithDates.map(task => {
+          const deadlineDate = new Date(task.deadline)
+          const taskStart = task.created_at ? new Date(task.created_at) : startDate
+          const left = Math.max(0, ((taskStart.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) / totalDays * 100)
+          const right = Math.min(100, ((deadlineDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) / totalDays * 100)
+          const width = Math.max(right - left, 1)
+          const isOverdue = deadlineDate < today && task.status !== 'done'
+          const color = isOverdue ? '#C0392B' : STATUS_COLORS[task.status] || '#B4B4B5'
+          return (
+            <div key={task.id} style={{ display: 'flex', alignItems: 'center', marginBottom: '8px', height: '32px' }}>
+              <div style={{ width: '200px', flexShrink: 0, fontSize: '12px', color: '#1A1A1A', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '12px' }}>
+                {task.title}
+              </div>
+              <div style={{ flex: 1, position: 'relative', height: '24px', background: '#F5F4F1', borderRadius: '6px' }}>
+                <div style={{ position: 'absolute', left: `${left}%`, width: `${width}%`, height: '100%', background: color, borderRadius: '6px', opacity: task.status === 'done' ? 0.5 : 1, transition: 'width 0.3s ease' }} />
+                {todayLeft >= 0 && todayLeft <= 100 && (
+                  <div style={{ position: 'absolute', left: `${todayLeft}%`, top: '-4px', bottom: '-4px', width: '2px', background: '#C0392B', borderRadius: '2px' }} />
+                )}
+              </div>
+              <div style={{ width: '70px', flexShrink: 0, fontSize: '11px', color: isOverdue ? '#C0392B' : '#888', textAlign: 'right', paddingLeft: '10px', fontWeight: isOverdue ? 600 : 400 }}>
+                {format(deadlineDate, 'MMM d')}
+              </div>
+            </div>
+          )
+        })}
+        {/* Legend */}
+        <div style={{ display: 'flex', gap: '16px', marginTop: '16px', marginLeft: '200px' }}>
+          {Object.entries(STATUS_COLORS).map(([k, v]) => (
+            <div key={k} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#888' }}>
+              <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: v }} />
+              {k.replace('_', ' ')}
+            </div>
+          ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#C0392B' }}>
+            <div style={{ width: '2px', height: '12px', background: '#C0392B', borderRadius: '2px' }} />
+            today
+          </div>
+        </div>
       </div>
     </div>
   )
