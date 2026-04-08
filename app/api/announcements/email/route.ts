@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
     // Send batch emails (Resend supports batch)
     const emails = recipients.map(r => ({
-      from: 'Lighthouse Construction OS <no-reply@lhc-eg.com>',
+      from: 'Lighthouse Construction OS <onboarding@resend.dev>',
       to: r.email,
       subject: `📢 ${ann.title}`,
       html: `

@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
     // Send invitation email
     await resend.emails.send({
-      from: 'Lighthouse Construction OS <no-reply@lhc-eg.com>',
+      from: 'Lighthouse Construction OS <onboarding@resend.dev>',
       to: email,
       subject: `You've been invited to Lighthouse Construction OS`,
       html: `
