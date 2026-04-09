@@ -35,12 +35,7 @@ export default function LoginPage() {
       position: 'relative',
       overflow: 'hidden',
     }}>
-      {/* Diamond pattern background */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M30 0L60 30L30 60L0 30z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        pointerEvents: 'none',
-      }} />
+
       {/* Gold left accent bar */}
       <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: '#FFCB1A' }} />
 
@@ -60,7 +55,7 @@ export default function LoginPage() {
           <img
             src="/logo-cube.png"
             alt="LHC"
-            style={{ width: 44, height: 44, objectFit: 'contain' }}
+            style={{ width: 36, height: 36, objectFit: 'contain' }}
           />
           <div>
             <div style={{ color: '#fff', fontSize: 16, fontWeight: 700, letterSpacing: '0.06em' }}>LIGHTHOUSE</div>
