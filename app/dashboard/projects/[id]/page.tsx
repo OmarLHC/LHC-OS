@@ -244,6 +244,13 @@ export default function ProjectPage() {
         </div>
       )}
 
+      {/* GANTT / TIMELINE VIEW */}
+      {view === 'gantt' && (
+        <div style={{ background: '#fff', borderRadius: '12px', border: '0.5px solid #E8E6E3', padding: '24px' }}>
+          <GanttView tasks={tasks} project={project} />
+        </div>
+      )}
+
       {/* New Task Modal */}
       {showNewTask && (
         <NewTaskModal
@@ -415,7 +422,7 @@ function NewTaskModal({ projectId, defaultStatus, profiles, departments, onClose
   )
 }
 
-export function GanttView({ tasks, project }: { tasks: any[], project: any }) {
+function GanttView({ tasks, project }: { tasks: any[], project: any }) {
   if (!tasks.length) return (
     <div style={{ padding: '40px', textAlign: 'center', color: '#B4B4B5' }}>No tasks with deadlines to show on timeline.</div>
   )
