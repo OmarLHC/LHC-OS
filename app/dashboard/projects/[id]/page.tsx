@@ -89,11 +89,15 @@ export default function ProjectPage() {
                 fontSize: '13px', fontWeight: 700, cursor: 'pointer', color: '#000' }}>
               + Add Task
             </button>
-            <button onClick={() => setView(v => v === 'kanban' ? 'list' : 'kanban')}
-              style={{ padding: '8px 14px', background: '#fff', border: '0.5px solid #E8E6E3',
-                borderRadius: '8px', fontSize: '13px', cursor: 'pointer', color: '#1A1A1A' }}>
-              {view === 'kanban' ? 'List view' : 'Board view'}
-            </button>
+            {(['kanban','list','gantt'] as const).map(v => (
+              <button key={v} onClick={() => setView(v)}
+                style={{ padding: '7px 14px', fontSize: '13px', cursor: 'pointer', borderRadius: '8px',
+                  fontFamily: 'inherit', border: view === v ? 'none' : '0.5px solid #E8E6E3',
+                  background: view === v ? '#1A1A1A' : '#fff',
+                  color: view === v ? '#fff' : '#1A1A1A', fontWeight: view === v ? 600 : 400 }}>
+                {v === 'kanban' ? 'Board' : v === 'list' ? 'List' : 'Timeline'}
+              </button>
+            ))}
           </div>
         </div>
 
