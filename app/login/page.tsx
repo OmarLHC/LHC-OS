@@ -55,7 +55,7 @@ export default function LoginPage() {
           <img
             src="/logo-cube.png"
             alt="LHC"
-            style={{ width: 36, height: 36, objectFit: 'contain' }}
+            style={{ width: 48, height: 48, objectFit: 'contain' }}
           />
           <div>
             <div style={{ color: '#fff', fontSize: 16, fontWeight: 700, letterSpacing: '0.06em' }}>LIGHTHOUSE</div>
