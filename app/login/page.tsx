@@ -51,14 +51,14 @@ export default function LoginPage() {
         zIndex: 1,
       }}>
         {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 52 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 52 }}>
           <img
             src="/logo-cube.png"
             alt="LHC"
-            style={{ width: 48, height: 48, objectFit: 'contain' }}
+            style={{ width: 56, height: 56, objectFit: 'contain' }}
           />
           <div>
-            <div style={{ color: '#fff', fontSize: 16, fontWeight: 700, letterSpacing: '0.06em' }}>LIGHTHOUSE</div>
+            <div style={{ color: '#fff', fontSize: 17, fontWeight: 700, letterSpacing: '0.06em' }}>LIGHTHOUSE</div>
             <div style={{ color: '#444', fontSize: 11, letterSpacing: '0.14em' }}>CONSTRUCTION OS</div>
           </div>
         </div>
