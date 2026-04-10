@@ -9,11 +9,11 @@ import type { Profile } from '@/lib/types'
 const NAV = [
   { href: '/dashboard',               label: 'Overview',      icon: <OverviewIcon /> },
   { href: '/dashboard/projects',      label: 'Projects',      icon: <ProjectsIcon /> },
+  { href: '/dashboard/reports',       label: 'Site Reports',  icon: <ReportsIcon /> },
+  { href: '/dashboard/documents',     label: 'Documents',     icon: <DocsIcon /> },
   { href: '/dashboard/announcements', label: 'Announcements', icon: <AnnIcon /> },
   { href: '/dashboard/people',        label: 'People',        icon: <PeopleIcon /> },
-  { href: '/dashboard/reports', label: 'Site Reports', icon: <ReportsIcon /> },
-  { href: '/dashboard/documents', label: 'Documents', icon: <DocsIcon /> },
-  { href: '/dashboard/admin', label: 'Admin', icon: <AdminIcon />, adminOnly: true },
+  { href: '/dashboard/admin',         label: 'Admin',         icon: <AdminIcon />, adminOnly: true },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -117,7 +117,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {profile?.full_name}
               </div>
               <div style={{ color:'#444', fontSize:11, marginTop:1 }}>
-                {profile?.role}
+                {profile?.title || profile?.role}
               </div>
             </div>
           </div>
