@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     const acceptUrl = `${appUrl}/invite/accept?token=${invite.token}`
 
     await resend.emails.send({
-      from: 'Lighthouse Construction OS <onboarding@resend.dev>',
+      from: 'Lighthouse Construction OS <noreply@lhc-eg.com>',
       to: invite.email,
       subject: `Reminder: Your Lighthouse Construction OS invitation`,
       html: `

@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     if (!doc) return NextResponse.json({ error: 'Document not found' }, { status: 404 })
 
     await resend.emails.send({
-      from: 'Lighthouse Construction <onboarding@resend.dev>',
+      from: 'Lighthouse Construction <noreply@lhc-eg.com>',
       to: clientEmail,
       subject: `Document: ${doc.name} — ${doc.project?.name}`,
       html: `
