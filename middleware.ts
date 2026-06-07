@@ -20,24 +20,42 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
   const path = request.nextUrl.pathname
 
-  // Public routes
+  // Public routes — skip auth check entirely
   const publicRoutes = ['/login', '/invite/accept']
   if (publicRoutes.some(r => path.startsWith(r))) {
-    if (user && path === '/login') {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
-    }
     return supabaseResponse
   }
 
   // Root redirect
   if (path === '/') {
-    return NextResponse.redirect(new URL(user ? '/dashboard' : '/login', request.url))
+    return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Protected routes
+  // Auth check with timeout to prevent 504s
+  let user = null
+  try {
+    const authPromise = supabase.auth.getUser()
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('auth timeout')), 3000)
+    )
+    const result = await Promise.race([authPromise, timeoutPromise]) as any
+    user = result?.data?.user ?? null
+  } catch {
+    // On timeout or error, redirect to login for protected routes
+    if (path.startsWith('/dashboard')) {
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+    return supabaseResponse
+  }
+
+  // Redirect logged-in users away from login
+  if (user && path === '/login') {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
+
+  // Protect dashboard routes
   if (path.startsWith('/dashboard') && !user) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
