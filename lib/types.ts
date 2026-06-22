@@ -2,6 +2,7 @@ export type Role = 'admin' | 'manager' | 'employee'
 export type ProjectStatus = 'planning' | 'active' | 'on_hold' | 'completed' | 'cancelled'
 export type Priority = 'low' | 'medium' | 'high' | 'critical'
 export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'done'
+export type TaskType = 'BOQ' | 'Contract' | 'Drawing' | 'Other' | 'Photo' | 'Site Report' | 'Submittal' | 'Tender Offer'
 export type Audience = 'all' | 'department'
 
 export interface Department {
@@ -74,6 +75,9 @@ export interface Task {
   deadline: string | null
   estimated_hours: number | null
   actual_hours: number | null
+  task_type: TaskType | null
+  attachment_url: string | null
+  attachment_name: string | null
   sort_order: number
   created_by: string | null
   created_at: string

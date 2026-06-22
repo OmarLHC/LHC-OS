@@ -37,7 +37,7 @@ export default function DocumentsPage() {
     setProfile(prof)
     const [{ data: d }, { data: p }, { data: t }] = await Promise.all([
       supabase.from('documents').select('*, project:projects(name,id), uploader:profiles!uploaded_by(full_name), approver:profiles!approved_by(full_name), task:tasks(title)').order('created_at', { ascending: false }),
-      supabase.from('projects').select('id,name').eq('status', 'active').order('name'),
+      supabase.from('projects').select('id,name').in('status', ['planning', 'active', 'on_hold']).order('name'),
       supabase.from('tasks').select('id,title,project_id').order('title')
     ])
     setDocs(d || [])

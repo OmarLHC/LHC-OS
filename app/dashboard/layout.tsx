@@ -9,6 +9,7 @@ import type { Profile } from '@/lib/types'
 const NAV = [
   { href: '/dashboard',               label: 'Overview',      icon: <OverviewIcon /> },
   { href: '/dashboard/projects',      label: 'Projects',      icon: <ProjectsIcon /> },
+  { href: '/dashboard/tasks',         label: 'Tasks',         icon: <TasksIcon /> },
   { href: '/dashboard/reports',       label: 'Site Reports',  icon: <ReportsIcon /> },
   { href: '/dashboard/documents',     label: 'Documents',     icon: <DocsIcon /> },
   { href: '/dashboard/announcements', label: 'Announcements', icon: <AnnIcon /> },
@@ -164,6 +165,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 }
 
 // ── ICONS ─────────────────────────────────────────────────────────────────────
+function TasksIcon() {
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+}
 function OverviewIcon() {
   return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor" opacity=".5"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".5"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor"/></svg>
 }

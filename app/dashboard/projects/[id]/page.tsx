@@ -300,11 +300,24 @@ function TaskCard({ task, onDelete, onMove, dragStart }: {
             background: `${PRIORITY_COLORS[task.priority]}15`, color: PRIORITY_COLORS[task.priority] }}>
             {task.priority}
           </span>
+          {(task as any).task_type && (task as any).task_type !== 'Other' && (
+            <span style={{ padding: '2px 6px', borderRadius: '3px', fontSize: '10px', fontWeight: 500,
+              background: '#E8E4DE', color: '#505151' }}>
+              {(task as any).task_type}
+            </span>
+          )}
           {(task.department as any)?.name && (
             <span style={{ fontSize: '10px', color: '#B4B4B5' }}>{(task.department as any).name}</span>
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {(task as any).attachment_url && (
+            <a href={(task as any).attachment_url} target="_blank" rel="noopener noreferrer"
+              style={{ fontSize: '10px', color: '#FFCB1A', textDecoration: 'none' }}
+              title={(task as any).attachment_name || 'Attachment'}>
+              📎
+            </a>
+          )}
           {task.deadline && (
             <span style={{ fontSize: '10px', color: overdue ? '#A32D2D' : '#B4B4B5', fontWeight: overdue ? 600 : 400 }}>
               {overdue ? '⚠ ' : ''}{format(new Date(task.deadline), 'MMM d')}
@@ -327,7 +340,9 @@ function NewTaskModal({ projectId, defaultStatus, profiles, departments, onClose
   projectId: string, defaultStatus: string, profiles: Profile[], departments: Department[],
   onClose: () => void, onCreated: () => void
 }) {
-  const [form, setForm] = useState({ title: '', description: '', status: defaultStatus, priority: 'medium', assignee_id: '', department_id: '', deadline: '', estimated_hours: '' })
+  const [form, setForm] = useState({ title: '', description: '', status: defaultStatus, priority: 'medium', assignee_id: '', department_id: '', deadline: '', estimated_hours: '', task_type: 'Other' })
+  const [attachFile, setAttachFile] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
   const [loading, setLoading] = useState(false)
   const supabase = createClient()
 
@@ -335,12 +350,28 @@ function NewTaskModal({ projectId, defaultStatus, profiles, departments, onClose
     e.preventDefault()
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
+    let attachment_url = null
+    let attachment_name = null
+    if (attachFile) {
+      setUploading(true)
+      const ext = attachFile.name.split('.').pop()
+      const path = `tasks/${projectId}/${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage.from('lhc-documents').upload(path, attachFile)
+      if (!upErr) {
+        const { data: { publicUrl } } = supabase.storage.from('lhc-documents').getPublicUrl(path)
+        attachment_url = publicUrl
+        attachment_name = attachFile.name
+      }
+      setUploading(false)
+    }
     await supabase.from('tasks').insert({
       project_id: projectId, title: form.title, description: form.description || null,
       status: form.status, priority: form.priority,
+      task_type: form.task_type,
       assignee_id: form.assignee_id || null, department_id: form.department_id || null,
       deadline: form.deadline || null,
       estimated_hours: form.estimated_hours ? parseFloat(form.estimated_hours) : null,
+      attachment_url, attachment_name,
       created_by: user?.id
     })
     onCreated()
@@ -399,6 +430,22 @@ function NewTaskModal({ projectId, defaultStatus, profiles, departments, onClose
               </select>
             </div>
           </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: '#505151', marginBottom: '6px' }}>Task Type</label>
+              <select value={form.task_type} onChange={e => setForm(p => ({ ...p, task_type: e.target.value }))}
+                style={{ width: '100%', padding: '9px 12px', border: '0.5px solid #E8E6E3', borderRadius: '8px', fontSize: '14px' }}>
+                {['BOQ','Contract','Drawing','Other','Photo','Site Report','Submittal','Tender Offer'].map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: '#505151', marginBottom: '6px' }}>Attachment</label>
+              <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.dwg"
+                onChange={e => setAttachFile(e.target.files?.[0] || null)}
+                style={{ width: '100%', padding: '7px 12px', border: '0.5px solid #E8E6E3', borderRadius: '8px', fontSize: '13px', boxSizing: 'border-box' }} />
+              {attachFile && <p style={{ fontSize: '11px', color: '#505151', marginTop: '4px' }}>📎 {attachFile.name}</p>}
+            </div>
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: '#505151', marginBottom: '6px' }}>Deadline</label>
@@ -417,7 +464,7 @@ function NewTaskModal({ projectId, defaultStatus, profiles, departments, onClose
               borderRadius: '8px', background: '#fff', fontSize: '14px', cursor: 'pointer' }}>Cancel</button>
             <button type="submit" disabled={loading} style={{ padding: '9px 18px', background: '#FFCB1A',
               border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', color: '#000' }}>
-              {loading ? 'Adding...' : 'Add Task'}
+              {uploading ? 'Uploading...' : loading ? 'Adding...' : 'Add Task'}
             </button>
           </div>
         </form>
