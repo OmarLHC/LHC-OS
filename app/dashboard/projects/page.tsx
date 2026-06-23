@@ -23,11 +23,19 @@ export default function ProjectsPage() {
   const [departments, setDepartments] = useState<Department[]>([])
   const [loading, setLoading] = useState(true)
   const [showNew, setShowNew] = useState(false)
+  const [editProject, setEditProject] = useState<any>(null)
   const [filterDept, setFilterDept] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
+  const [profile, setProfile] = useState<any>(null)
   const supabase = createClient()
 
   useEffect(() => { load() }, [])
+
+  async function deleteProject(id: string) {
+    if (!confirm('Delete this project and all its tasks? This cannot be undone.')) return
+    await supabase.from('projects').delete().eq('id', id)
+    setProjects(prev => prev.filter((p: any) => p.id !== id))
+  }
 
   async function load() {
     const [{ data: projs }, { data: depts }] = await Promise.all([
@@ -42,6 +50,7 @@ export default function ProjectsPage() {
     setLoading(false)
   }
 
+  const isManagement = profile?.role === 'admin' || profile?.role === 'manager'
   const filtered = projects.filter(p =>
     (!filterDept || p.department_id === filterDept) &&
     (!filterStatus || p.status === filterStatus)
@@ -90,6 +99,15 @@ export default function ProjectsPage() {
           const isOverdue = project.deadline && new Date(project.deadline) < new Date() && project.status !== 'completed'
 
           return (
+            <div key={project.id} style={{ position: 'relative' }}>
+            {isManagement && (
+              <div style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 2, display: 'flex', gap: '4px' }}>
+                <button onClick={e => { e.preventDefault(); setEditProject(project); }}
+                  style={{ padding: '4px 8px', background: 'rgba(255,255,255,0.9)', border: '0.5px solid #E8E6E3', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', color: '#505151', fontWeight: 500 }}>Edit</button>
+                <button onClick={e => { e.preventDefault(); deleteProject(project.id); }}
+                  style={{ padding: '4px 8px', background: 'rgba(255,255,255,0.9)', border: '0.5px solid #E8E6E3', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', color: '#EF4444', fontWeight: 500 }}>Delete</button>
+              </div>
+            )}
             <Link key={project.id} href={`/dashboard/projects/${project.id}`}
               style={{ textDecoration: 'none' }}>
               <div style={{
@@ -152,6 +170,7 @@ export default function ProjectsPage() {
                 </div>
               </div>
             </Link>
+            </div>
           )
         })}
         {filtered.length === 0 && (
@@ -165,15 +184,31 @@ export default function ProjectsPage() {
       </div>
 
       {/* New Project Modal */}
+      {editProject && <NewProjectModal
+        project={editProject}
+        departments={departments}
+        onClose={() => setEditProject(null)}
+        onCreated={() => { setEditProject(null); load(); }}
+      />}
       {showNew && <NewProjectModal departments={departments} onClose={() => setShowNew(false)} onCreated={load} />}
     </div>
   )
 }
 
-function NewProjectModal({ departments, onClose, onCreated }: {
-  departments: Department[], onClose: () => void, onCreated: () => void
+function NewProjectModal({ departments, onClose, onCreated, project }: {
+  departments: Department[], onClose: () => void, onCreated: () => void, project?: any
 }) {
-  const [form, setForm] = useState({ name: '', client: '', description: '', department_id: '', priority: 'medium', status: 'planning', deadline: '', start_date: '' })
+  const isEdit = !!project
+  const [form, setForm] = useState({
+    name: project?.name || '',
+    client: project?.client || '',
+    description: project?.description || '',
+    department_id: project?.department_id || '',
+    priority: project?.priority || 'medium',
+    status: project?.status || 'planning',
+    deadline: project?.deadline ? project.deadline.split('T')[0] : '',
+    start_date: project?.start_date ? project.start_date.split('T')[0] : ''
+  })
   const [loading, setLoading] = useState(false)
   const supabase = createClient()
 
@@ -198,7 +233,7 @@ function NewProjectModal({ departments, onClose, onCreated }: {
       <div style={{ background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '520px',
         maxHeight: '90vh', overflow: 'auto', padding: '28px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>New Project</h2>
+          <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>{isEdit ? 'Edit Project' : 'New Project'}</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#888' }}>×</button>
         </div>
         <form onSubmit={submit}>
@@ -262,7 +297,7 @@ function NewProjectModal({ departments, onClose, onCreated }: {
               borderRadius: '8px', background: '#fff', fontSize: '14px', cursor: 'pointer' }}>Cancel</button>
             <button type="submit" disabled={loading} style={{ padding: '9px 18px', background: '#FFCB1A',
               border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', color: '#000' }}>
-              {loading ? 'Creating...' : 'Create Project'}
+              {loading ? (isEdit ? 'Saving...' : 'Creating...') : (isEdit ? 'Save Changes' : 'Create Project')}
             </button>
           </div>
         </form>

@@ -19,6 +19,7 @@ export default function ProjectPage() {
   const { id } = useParams()
   const router = useRouter()
   const [project, setProject] = useState<any>(null)
+  const [profile, setProfile] = useState<any>(null)
   const [tasks, setTasks] = useState<Task[]>([])
   const [members, setMembers] = useState<Profile[]>([])
   const [allProfiles, setAllProfiles] = useState<Profile[]>([])
@@ -283,6 +284,7 @@ export default function ProjectPage() {
           task={selectedTask}
           profiles={allProfiles}
           departments={departments}
+          currentProfile={profile}
           onClose={() => setSelectedTask(null)}
           onUpdated={(updated: any) => {
             setTasks((prev: any[]) => prev.map((t: any) => t.id === updated.id ? { ...t, ...updated } : t))
@@ -587,9 +589,10 @@ function GanttView({ tasks, project }: { tasks: any[], project: any }) {
   )
 }
 
-function TaskDetailModal({ task, profiles, departments, onClose, onUpdated }: {
-  task: any, profiles: any[], departments: any[], onClose: () => void, onUpdated: (t: any) => void
+function TaskDetailModal({ task, profiles, departments, onClose, onUpdated, currentProfile }: {
+  task: any, profiles: any[], departments: any[], onClose: () => void, onUpdated: (t: any) => void, currentProfile?: any
 }) {
+  const isManagement = currentProfile?.role === 'admin' || currentProfile?.role === 'manager'
   const [form, setForm] = useState({
     title: task.title || '',
     description: task.description || '',
@@ -666,9 +669,11 @@ function TaskDetailModal({ task, profiles, departments, onClose, onUpdated }: {
 
         {/* Title */}
         <div style={{ padding: '12px 28px 0' }}>
-          <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
+          <input value={form.title} onChange={e => isManagement && setForm(p => ({ ...p, title: e.target.value }))}
+            readOnly={!isManagement}
             style={{ width: '100%', fontSize: '20px', fontWeight: 700, border: 'none', outline: 'none',
-              padding: '0', color: '#1A1A1A', boxSizing: 'border-box' as const }} />
+              padding: '0', color: '#1A1A1A', boxSizing: 'border-box' as const,
+              cursor: isManagement ? 'text' : 'default', background: 'transparent' }} />
         </div>
 
         {/* Body */}
@@ -678,9 +683,11 @@ function TaskDetailModal({ task, profiles, departments, onClose, onUpdated }: {
           <div style={{ marginBottom: '20px' }}>
             <label style={labelStyle}>Description</label>
             <textarea rows={4} value={form.description}
-              onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-              placeholder="Add a description..."
-              style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} />
+              onChange={e => isManagement && setForm(p => ({ ...p, description: e.target.value }))}
+              readOnly={!isManagement}
+              placeholder={isManagement ? "Add a description..." : "No description."}
+              style={{ ...inputStyle, resize: isManagement ? 'vertical' : 'none', fontFamily: 'inherit',
+                background: isManagement ? '#fff' : '#FAFAF9', cursor: isManagement ? 'text' : 'default' }} />
           </div>
 
           {/* Attachment */}
@@ -700,10 +707,14 @@ function TaskDetailModal({ task, profiles, departments, onClose, onUpdated }: {
             ) : (
               <p style={{ fontSize: '13px', color: '#888', margin: '0 0 10px 0' }}>No attachment yet.</p>
             )}
-            <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.dwg"
-              onChange={e => setAttachFile(e.target.files?.[0] || null)}
-              style={{ fontSize: '13px', width: '100%' }} />
-            {attachFile && <p style={{ fontSize: '12px', color: '#505151', margin: '6px 0 0' }}>📎 {attachFile.name} — will upload on save</p>}
+            {isManagement && (
+              <>
+                <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.dwg"
+                  onChange={e => setAttachFile(e.target.files?.[0] || null)}
+                  style={{ fontSize: '13px', width: '100%' }} />
+                {attachFile && <p style={{ fontSize: '12px', color: '#505151', margin: '6px 0 0' }}>📎 {attachFile.name} — will upload on save</p>}
+              </>
+            )}
           </div>
 
           {/* Grid fields */}
@@ -719,52 +730,77 @@ function TaskDetailModal({ task, profiles, departments, onClose, onUpdated }: {
             </div>
             <div>
               <label style={labelStyle}>Priority</label>
-              <select value={form.priority} onChange={e => setForm(p => ({ ...p, priority: e.target.value }))} style={inputStyle}>
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="critical">Critical</option>
-              </select>
+              {isManagement ? (
+                <select value={form.priority} onChange={e => setForm(p => ({ ...p, priority: e.target.value }))} style={inputStyle}>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
+                </select>
+              ) : (
+                <div style={{ ...inputStyle, background: '#FAFAF9', color: `${PRIORITY_COLORS[form.priority]}`, fontWeight: 600 }}>{form.priority}</div>
+              )}
             </div>
             <div>
               <label style={labelStyle}>Task Type</label>
-              <select value={form.task_type} onChange={e => setForm(p => ({ ...p, task_type: e.target.value }))} style={inputStyle}>
-                {['BOQ','Contract','Drawing','Other','Photo','Site Report','Submittal','Tender Offer'].map(t => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
+              {isManagement ? (
+                <select value={form.task_type} onChange={e => setForm(p => ({ ...p, task_type: e.target.value }))} style={inputStyle}>
+                  {['BOQ','Contract','Drawing','Other','Photo','Site Report','Submittal','Tender Offer'].map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              ) : (
+                <div style={{ ...inputStyle, background: '#FAFAF9' }}>{form.task_type || 'Other'}</div>
+              )}
             </div>
             <div>
               <label style={labelStyle}>Deadline</label>
-              <input type="date" value={form.deadline} onChange={e => setForm(p => ({ ...p, deadline: e.target.value }))} style={inputStyle} />
+              {isManagement ? (
+                <input type="date" value={form.deadline} onChange={e => setForm(p => ({ ...p, deadline: e.target.value }))} style={inputStyle} />
+              ) : (
+                <div style={{ ...inputStyle, background: '#FAFAF9' }}>{form.deadline || 'No deadline'}</div>
+              )}
             </div>
             <div>
               <label style={labelStyle}>Assign To</label>
-              <select value={form.assignee_id} onChange={e => setForm(p => ({ ...p, assignee_id: e.target.value }))} style={inputStyle}>
-                <option value="">Unassigned</option>
-                {profiles.map((p: any) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
-              </select>
+              {isManagement ? (
+                <select value={form.assignee_id} onChange={e => setForm(p => ({ ...p, assignee_id: e.target.value }))} style={inputStyle}>
+                  <option value="">Unassigned</option>
+                  {profiles.map((p: any) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+                </select>
+              ) : (
+                <div style={{ ...inputStyle, background: '#FAFAF9' }}>{profiles.find((p: any) => p.id === form.assignee_id)?.full_name || 'Unassigned'}</div>
+              )}
             </div>
             <div>
               <label style={labelStyle}>Department</label>
-              <select value={form.department_id} onChange={e => setForm(p => ({ ...p, department_id: e.target.value }))} style={inputStyle}>
-                <option value="">None</option>
-                {departments.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </select>
+              {isManagement ? (
+                <select value={form.department_id} onChange={e => setForm(p => ({ ...p, department_id: e.target.value }))} style={inputStyle}>
+                  <option value="">None</option>
+                  {departments.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </select>
+              ) : (
+                <div style={{ ...inputStyle, background: '#FAFAF9' }}>{departments.find((d: any) => d.id === form.department_id)?.name || 'None'}</div>
+              )}
             </div>
           </div>
         </div>
 
         {/* Footer */}
         <div style={{ padding: '16px 28px', borderTop: '0.5px solid #E8E6E3',
-          display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-          <button onClick={onClose} style={{ padding: '9px 18px', border: '0.5px solid #E8E6E3',
-            borderRadius: '8px', background: '#fff', fontSize: '14px', cursor: 'pointer' }}>Cancel</button>
-          <button onClick={save} disabled={saving || uploading}
-            style={{ padding: '9px 24px', background: '#FFCB1A', border: 'none',
-              borderRadius: '8px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', color: '#000' }}>
-            {uploading ? 'Uploading...' : saving ? 'Saving...' : 'Save Changes'}
-          </button>
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+          {!isManagement && (
+            <span style={{ fontSize: '12px', color: '#888' }}>You can update the task status below.</span>
+          )}
+          <div style={{ display: 'flex', gap: '10px', marginLeft: 'auto' }}>
+            <button onClick={onClose} style={{ padding: '9px 18px', border: '0.5px solid #E8E6E3',
+              borderRadius: '8px', background: '#fff', fontSize: '14px', cursor: 'pointer' }}>Cancel</button>
+            <button onClick={save} disabled={saving || uploading}
+              style={{ padding: '9px 24px', background: '#FFCB1A', border: 'none',
+                borderRadius: '8px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', color: '#000' }}>
+              {uploading ? 'Uploading...' : saving ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -11,12 +11,19 @@ export default function ReportsPage() {
   const [projects, setProjects] = useState<any[]>([])
   const [profile, setProfile] = useState<any>(null)
   const [showNew, setShowNew] = useState(false)
+  const [editReport, setEditReport] = useState<any>(null)
   const [filterProject, setFilterProject] = useState('')
   const [filterType, setFilterType] = useState('')
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
   useEffect(() => { load() }, [])
+
+  async function deleteReport(id: string) {
+    if (!confirm('Delete this site report? This cannot be undone.')) return
+    await supabase.from('site_reports').delete().eq('id', id)
+    setReports(prev => prev.filter((r: any) => r.id !== id))
+  }
 
   async function load() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -84,12 +91,13 @@ export default function ReportsPage() {
         ) : filtered.map(r => <ReportCard key={r.id} report={r} isManagement={isManagement} onReview={markReviewed} />)}
       </div>
 
+      {editReport && <NewReportModal projects={projects} profile={profile} report={editReport} onClose={() => setEditReport(null)} onCreated={() => { setEditReport(null); load(); }} />}
       {showNew && <NewReportModal projects={projects} profile={profile} onClose={() => setShowNew(false)} onCreated={load} />}
     </div>
   )
 }
 
-function ReportCard({ report, isManagement, onReview }: any) {
+function ReportCard({ report, isManagement, onReview, onEdit, onDelete, currentUserId }: any) {
   const [expanded, setExpanded] = useState(false)
   const manpower = report.manpower_breakdown || []
   const isReviewed = report.status === 'reviewed'
@@ -124,6 +132,14 @@ function ReportCard({ report, isManagement, onReview }: any) {
             </button>
           ) : (
             <span style={{ padding: '3px 10px', borderRadius: '6px', fontSize: '11px', background: '#FFF3CD', color: '#856404' }}>Pending Review</span>
+          )}
+          {(isManagement || report.submitter_id === currentUserId) && (
+            <div style={{ display: 'flex', gap: '4px' }} onClick={e => e.stopPropagation()}>
+              <button onClick={() => onEdit(report)}
+                style={{ padding: '4px 10px', background: '#fff', border: '0.5px solid #E8E6E3', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', color: '#505151', fontWeight: 500 }}>Edit</button>
+              <button onClick={() => onDelete(report.id)}
+                style={{ padding: '4px 10px', background: '#fff', border: '0.5px solid #FECACA', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', color: '#EF4444', fontWeight: 500 }}>Delete</button>
+            </div>
           )}
           <span style={{ color: '#B4B4B5' }}>{expanded ? '▲' : '▼'}</span>
         </div>
@@ -164,7 +180,8 @@ function ReportCard({ report, isManagement, onReview }: any) {
   )
 }
 
-function NewReportModal({ projects, profile, onClose, onCreated }: any) {
+function NewReportModal({ projects, profile, onClose, onCreated, report }: any) {
+  const isEdit = !!report
   const [form, setForm] = useState({
     project_id: '', report_type: 'daily',
     report_date: new Date().toISOString().split('T')[0],
@@ -173,7 +190,7 @@ function NewReportModal({ projects, profile, onClose, onCreated }: any) {
     materials_received: '', materials_pending: '',
     issues: '', blockers: ''
   })
-  const [manpower, setManpower] = useState<{ trade: string; count: string }[]>([{ trade: '', count: '' }])
+  const [manpower, setManpower] = useState<{ trade: string; count: string }[]>(report?.manpower_breakdown?.length ? report.manpower_breakdown.map((m: any) => ({ trade: m.trade || '', count: String(m.count || '') })) : [{ trade: '', count: '' }])
   const [loading, setLoading] = useState(false)
   const supabase = createClient()
 
@@ -211,7 +228,7 @@ function NewReportModal({ projects, profile, onClose, onCreated }: any) {
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
       <div style={{ background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '620px', maxHeight: '90vh', overflow: 'auto', padding: '28px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>New Site Report</h2>
+          <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>{isEdit ? 'Edit Site Report' : 'New Site Report'}</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#888' }}>×</button>
         </div>
         <form onSubmit={submit}>
@@ -278,7 +295,7 @@ function NewReportModal({ projects, profile, onClose, onCreated }: any) {
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '16px' }}>
             <button type="button" onClick={onClose} style={{ padding: '9px 18px', border: '0.5px solid #E8E6E3', borderRadius: '8px', background: '#fff', fontSize: '14px', cursor: 'pointer' }}>Cancel</button>
             <button type="submit" disabled={loading} style={{ padding: '9px 18px', background: '#FFCB1A', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', color: '#000', opacity: loading ? 0.7 : 1 }}>
-              {loading ? 'Submitting...' : 'Submit Report'}
+              {loading ? (isEdit ? 'Saving...' : 'Submitting...') : (isEdit ? 'Save Changes' : 'Submit Report')}
             </button>
           </div>
         </form>
