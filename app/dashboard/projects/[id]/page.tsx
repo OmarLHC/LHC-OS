@@ -190,7 +190,7 @@ export default function ProjectPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {tasksByCol(col.id).map(task => (
                   <TaskCard key={task.id} task={task} onDelete={deleteTask}
-                    onMove={moveTask} dragStart={() => setDragTask(task.id)} />
+                    onMove={moveTask} onOpen={setSelectedTask} dragStart={() => setDragTask(task.id)} />
                 ))}
               </div>
             </div>
