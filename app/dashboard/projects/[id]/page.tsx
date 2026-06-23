@@ -770,3 +770,4 @@ function TaskDetailModal({ task, profiles, departments, onClose, onUpdated }: {
     </div>
   )
 }
+// rebuilt Tue Jun 23 14:04:04 UTC 2026
