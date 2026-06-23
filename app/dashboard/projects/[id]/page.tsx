@@ -307,7 +307,9 @@ function TaskCard({ task, onDelete, onMove, dragStart, onOpen }: {
       onMouseEnter={e => (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'}
       onMouseLeave={e => (e.currentTarget as HTMLElement).style.boxShadow = 'none'}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-        <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A', flex: 1, paddingRight: '8px', lineHeight: 1.4 }}>
+        <div onClick={e => { e.stopPropagation(); onOpen(task); }}
+          style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A', flex: 1, paddingRight: '8px', lineHeight: 1.4,
+            cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', textDecorationColor: '#B4B4B5' }}>
           {task.title}
         </div>
         <button onClick={() => onDelete(task.id)}
