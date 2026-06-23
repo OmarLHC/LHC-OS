@@ -25,7 +25,7 @@ export default function ReportsPage() {
     setProfile(prof)
     const [{ data: reps }, { data: projs }] = await Promise.all([
       supabase.from('site_reports').select('*, project:projects(name,id), submitter:profiles!submitted_by(full_name)').order('report_date', { ascending: false }).limit(100),
-      supabase.from('projects').select('id,name').eq('status', 'active').order('name')
+      supabase.from('projects').select('id,name').in('status', ['planning', 'active', 'on_hold']).order('name')
     ])
     setReports(reps || [])
     setProjects(projs || [])

@@ -25,6 +25,7 @@ export default function ProjectPage() {
   const [departments, setDepartments] = useState<Department[]>([])
   const [view, setView] = useState<'kanban' | 'list' | 'gantt'>('kanban')
   const [showNewTask, setShowNewTask] = useState(false)
+  const [selectedTask, setSelectedTask] = useState<any>(null)
   const [newTaskCol, setNewTaskCol] = useState('todo')
   const [dragTask, setDragTask] = useState<string | null>(null)
   const supabase = createClient()
@@ -117,7 +118,20 @@ export default function ProjectPage() {
             </div>
             <div>
               <div style={{ fontSize: '11px', color: '#888', marginBottom: '2px' }}>STATUS</div>
-              <div style={{ fontSize: '13px', fontWeight: 600 }}>{STATUS_LABELS[project.status]}</div>
+              <select value={project.status}
+                onChange={async e => {
+                  const newStatus = e.target.value
+                  setProject((p: any) => ({ ...p, status: newStatus }))
+                  await supabase.from('projects').update({ status: newStatus }).eq('id', id)
+                }}
+                style={{ fontSize: '13px', fontWeight: 600, border: 'none', background: 'transparent',
+                  cursor: 'pointer', padding: '0', outline: 'none', color: '#1A1A1A' }}>
+                <option value="planning">Planning</option>
+                <option value="active">Active</option>
+                <option value="on_hold">On Hold</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
             </div>
             <div>
               <div style={{ fontSize: '11px', color: '#888', marginBottom: '2px' }}>DEPARTMENT</div>
@@ -263,12 +277,25 @@ export default function ProjectPage() {
           onClose={() => setShowNewTask(false)} onCreated={load}
         />
       )}
+      {/* Task Detail Modal */}
+      {selectedTask && (
+        <TaskDetailModal
+          task={selectedTask}
+          profiles={allProfiles}
+          departments={departments}
+          onClose={() => setSelectedTask(null)}
+          onUpdated={(updated: any) => {
+            setTasks((prev: any[]) => prev.map((t: any) => t.id === updated.id ? { ...t, ...updated } : t))
+            setSelectedTask((prev: any) => ({ ...prev, ...updated }))
+          }}
+        />
+      )}
     </div>
   )
 }
 
-function TaskCard({ task, onDelete, onMove, dragStart }: {
-  task: Task, onDelete: (id: string) => void, onMove: (id: string, status: string) => void, dragStart: () => void
+function TaskCard({ task, onDelete, onMove, dragStart, onOpen }: {
+  task: Task, onDelete: (id: string) => void, onMove: (id: string, status: string) => void, dragStart: () => void, onOpen: (task: any) => void
 }) {
   const overdue = task.deadline && new Date(task.deadline) < new Date() && task.status !== 'done'
   const initials = (task.assignee as any)?.full_name?.split(' ').map((n: string) => n[0]).join('').slice(0,2) || ''
@@ -551,6 +578,190 @@ function GanttView({ tasks, project }: { tasks: any[], project: any }) {
             <div style={{ width: '2px', height: '12px', background: '#C0392B', borderRadius: '2px' }} />
             today
           </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function TaskDetailModal({ task, profiles, departments, onClose, onUpdated }: {
+  task: any, profiles: any[], departments: any[], onClose: () => void, onUpdated: (t: any) => void
+}) {
+  const [form, setForm] = useState({
+    title: task.title || '',
+    description: task.description || '',
+    status: task.status || 'todo',
+    priority: task.priority || 'medium',
+    task_type: task.task_type || 'Other',
+    assignee_id: task.assignee_id || '',
+    department_id: task.department_id || '',
+    deadline: task.deadline ? task.deadline.split('T')[0] : '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [attachFile, setAttachFile] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const supabase = createClient()
+
+  const PRIORITY_COLORS: Record<string, string> = { low: '#22C55E', medium: '#F59E0B', high: '#EF4444', critical: '#7C3AED' }
+  const STATUS_LABELS: Record<string, string> = { todo: 'To Do', in_progress: 'In Progress', review: 'Review', done: 'Done' }
+  const isOverdue = task.deadline && new Date(task.deadline) < new Date() && task.status !== 'done'
+
+  async function save() {
+    setSaving(true)
+    let attachment_url = task.attachment_url
+    let attachment_name = task.attachment_name
+    if (attachFile) {
+      setUploading(true)
+      const ext = attachFile.name.split('.').pop()
+      const path = `tasks/${task.project_id}/${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage.from('lhc-documents').upload(path, attachFile)
+      if (!upErr) {
+        const { data: { publicUrl } } = supabase.storage.from('lhc-documents').getPublicUrl(path)
+        attachment_url = publicUrl
+        attachment_name = attachFile.name
+      }
+      setUploading(false)
+    }
+    const updates = { ...form, attachment_url, attachment_name,
+      assignee_id: form.assignee_id || null,
+      department_id: form.department_id || null,
+      deadline: form.deadline || null }
+    await supabase.from('tasks').update(updates).eq('id', task.id)
+    onUpdated({ ...task, ...updates, attachment_url, attachment_name })
+    setSaving(false)
+  }
+
+  const inputStyle = { width: '100%', padding: '9px 12px', border: '0.5px solid #E8E6E3', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' as const }
+  const labelStyle = { display: 'block' as const, fontSize: '12px', fontWeight: 500 as const, color: '#505151', marginBottom: '6px' }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex',
+      alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div style={{ background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '620px',
+        maxHeight: '90vh', overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+
+        {/* Header */}
+        <div style={{ padding: '24px 28px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 600,
+              background: `${PRIORITY_COLORS[form.priority]}15`, color: PRIORITY_COLORS[form.priority] }}>
+              {form.priority}
+            </span>
+            {form.task_type !== 'Other' && (
+              <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 600,
+                background: '#E8E4DE', color: '#505151' }}>{form.task_type}</span>
+            )}
+            {isOverdue && (
+              <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 600,
+                background: '#FEE2E2', color: '#EF4444' }}>⚠ Overdue</span>
+            )}
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '22px',
+            cursor: 'pointer', color: '#888', lineHeight: 1, padding: '0 0 0 16px' }}>×</button>
+        </div>
+
+        {/* Title */}
+        <div style={{ padding: '12px 28px 0' }}>
+          <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
+            style={{ width: '100%', fontSize: '20px', fontWeight: 700, border: 'none', outline: 'none',
+              padding: '0', color: '#1A1A1A', boxSizing: 'border-box' as const }} />
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: '20px 28px', flex: 1 }}>
+
+          {/* Description */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={labelStyle}>Description</label>
+            <textarea rows={4} value={form.description}
+              onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+              placeholder="Add a description..."
+              style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} />
+          </div>
+
+          {/* Attachment */}
+          <div style={{ marginBottom: '20px', padding: '16px', background: '#FAFAF9',
+            borderRadius: '10px', border: '0.5px solid #E8E6E3' }}>
+            <label style={labelStyle}>Attachment</label>
+            {task.attachment_url ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                <span style={{ fontSize: '18px' }}>📎</span>
+                <a href={task.attachment_url} target="_blank" rel="noopener noreferrer"
+                  style={{ fontSize: '14px', color: '#FFCB1A', fontWeight: 500, textDecoration: 'none',
+                    borderBottom: '1px solid #FFCB1A' }}>
+                  {task.attachment_name || 'View Attachment'}
+                </a>
+                <span style={{ fontSize: '11px', color: '#888' }}>— click to open</span>
+              </div>
+            ) : (
+              <p style={{ fontSize: '13px', color: '#888', margin: '0 0 10px 0' }}>No attachment yet.</p>
+            )}
+            <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.dwg"
+              onChange={e => setAttachFile(e.target.files?.[0] || null)}
+              style={{ fontSize: '13px', width: '100%' }} />
+            {attachFile && <p style={{ fontSize: '12px', color: '#505151', margin: '6px 0 0' }}>📎 {attachFile.name} — will upload on save</p>}
+          </div>
+
+          {/* Grid fields */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+            <div>
+              <label style={labelStyle}>Status</label>
+              <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))} style={inputStyle}>
+                <option value="todo">To Do</option>
+                <option value="in_progress">In Progress</option>
+                <option value="review">Review</option>
+                <option value="done">Done</option>
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>Priority</label>
+              <select value={form.priority} onChange={e => setForm(p => ({ ...p, priority: e.target.value }))} style={inputStyle}>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>Task Type</label>
+              <select value={form.task_type} onChange={e => setForm(p => ({ ...p, task_type: e.target.value }))} style={inputStyle}>
+                {['BOQ','Contract','Drawing','Other','Photo','Site Report','Submittal','Tender Offer'].map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>Deadline</label>
+              <input type="date" value={form.deadline} onChange={e => setForm(p => ({ ...p, deadline: e.target.value }))} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Assign To</label>
+              <select value={form.assignee_id} onChange={e => setForm(p => ({ ...p, assignee_id: e.target.value }))} style={inputStyle}>
+                <option value="">Unassigned</option>
+                {profiles.map((p: any) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>Department</label>
+              <select value={form.department_id} onChange={e => setForm(p => ({ ...p, department_id: e.target.value }))} style={inputStyle}>
+                <option value="">None</option>
+                {departments.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '16px 28px', borderTop: '0.5px solid #E8E6E3',
+          display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+          <button onClick={onClose} style={{ padding: '9px 18px', border: '0.5px solid #E8E6E3',
+            borderRadius: '8px', background: '#fff', fontSize: '14px', cursor: 'pointer' }}>Cancel</button>
+          <button onClick={save} disabled={saving || uploading}
+            style={{ padding: '9px 24px', background: '#FFCB1A', border: 'none',
+              borderRadius: '8px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', color: '#000' }}>
+            {uploading ? 'Uploading...' : saving ? 'Saving...' : 'Save Changes'}
+          </button>
         </div>
       </div>
     </div>
