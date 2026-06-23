@@ -301,18 +301,19 @@ function TaskCard({ task, onDelete, onMove, dragStart, onOpen }: {
   const initials = (task.assignee as any)?.full_name?.split(' ').map((n: string) => n[0]).join('').slice(0,2) || ''
 
   return (
-    <div draggable onDragStart={dragStart}
+    <div draggable
+      onDragStart={e => { (e.currentTarget as any)._dragging = true; dragStart(); }}
+      onDragEnd={e => { setTimeout(() => { (e.currentTarget as any)._dragging = false; }, 100); }}
+      onClick={e => { if (!(e.currentTarget as any)._dragging) onOpen(task); }}
       style={{ background: '#fff', borderRadius: '8px', border: '0.5px solid #E8E6E3',
-        padding: '12px', cursor: 'grab', transition: 'box-shadow 0.1s' }}
+        padding: '12px', cursor: 'pointer', transition: 'box-shadow 0.1s' }}
       onMouseEnter={e => (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'}
       onMouseLeave={e => (e.currentTarget as HTMLElement).style.boxShadow = 'none'}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-        <div onClick={e => { e.stopPropagation(); onOpen(task); }}
-          style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A', flex: 1, paddingRight: '8px', lineHeight: 1.4,
-            cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', textDecorationColor: '#B4B4B5' }}>
+        <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A1A', flex: 1, paddingRight: '8px', lineHeight: 1.4 }}>
           {task.title}
         </div>
-        <button onClick={() => onDelete(task.id)}
+        <button onClick={e => { e.stopPropagation(); onDelete(task.id); }}
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#B4B4B5',
             fontSize: '16px', padding: '0', lineHeight: 1, flexShrink: 0 }}>×</button>
       </div>
