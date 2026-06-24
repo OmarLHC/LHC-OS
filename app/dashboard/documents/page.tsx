@@ -410,3 +410,4 @@ function DocDetailModal({ doc, isManagement, profile, onClose, onUpdated }: any)
     </div>
   )
 }
+// force redeploy Wed Jun 24 12:44:20 UTC 2026
