@@ -49,8 +49,12 @@ export default function ProjectPage() {
   }
 
   async function moveTask(taskId: string, newStatus: string) {
+    const prevTask = tasks.find((t: any) => t.id === taskId)
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus as any } : t))
     await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId)
+    if (newStatus === 'done' && prevTask?.status !== 'done') {
+      fetch('/api/tasks/notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ taskId }) }).catch(() => {})
+    }
     // Refresh project to get updated progress
     const { data } = await supabase.from('projects').select('progress').eq('id', id).single()
     if (data) setProject((p: any) => ({ ...p, progress: data.progress }))
@@ -372,7 +376,7 @@ function NewTaskModal({ projectId, defaultStatus, profiles, departments, onClose
   projectId: string, defaultStatus: string, profiles: Profile[], departments: Department[],
   onClose: () => void, onCreated: () => void
 }) {
-  const [form, setForm] = useState({ title: '', description: '', status: defaultStatus, priority: 'medium', assignee_id: '', department_id: '', deadline: '', estimated_hours: '', task_type: 'Other' })
+  const [form, setForm] = useState({ title: '', description: '', status: defaultStatus, priority: 'medium', assignee_id: '', department_id: '', deadline: '', estimated_hours: '', task_type: 'Other', complete_on_upload: false })
   const [attachFile, setAttachFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -404,6 +408,7 @@ function NewTaskModal({ projectId, defaultStatus, profiles, departments, onClose
       deadline: form.deadline || null,
       estimated_hours: form.estimated_hours ? parseFloat(form.estimated_hours) : null,
       attachment_url, attachment_name,
+      complete_on_upload: form.complete_on_upload,
       created_by: user?.id
     })
     onCreated()
@@ -477,6 +482,14 @@ function NewTaskModal({ projectId, defaultStatus, profiles, departments, onClose
                 style={{ width: '100%', padding: '7px 12px', border: '0.5px solid #E8E6E3', borderRadius: '8px', fontSize: '13px', boxSizing: 'border-box' }} />
               {attachFile && <p style={{ fontSize: '11px', color: '#505151', marginTop: '4px' }}>📎 {attachFile.name}</p>}
             </div>
+          </div>
+          <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input type="checkbox" id="complete_on_upload" checked={form.complete_on_upload}
+              onChange={e => setForm(p => ({ ...p, complete_on_upload: e.target.checked }))}
+              style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
+            <label htmlFor="complete_on_upload" style={{ fontSize: '13px', color: '#505151', cursor: 'pointer' }}>
+              Auto-complete task when document is uploaded
+            </label>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
             <div>
@@ -602,6 +615,7 @@ function TaskDetailModal({ task, profiles, departments, onClose, onUpdated, curr
     assignee_id: task.assignee_id || '',
     department_id: task.department_id || '',
     deadline: task.deadline ? task.deadline.split('T')[0] : '',
+    complete_on_upload: task.complete_on_upload || false,
   })
   const [saving, setSaving] = useState(false)
   const [attachFile, setAttachFile] = useState<File | null>(null)
@@ -633,6 +647,10 @@ function TaskDetailModal({ task, profiles, departments, onClose, onUpdated, curr
       department_id: form.department_id || null,
       deadline: form.deadline || null }
     await supabase.from('tasks').update(updates).eq('id', task.id)
+    // Send completion notification if status changed to done
+    if (updates.status === 'done' && task.status !== 'done') {
+      fetch('/api/tasks/notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ taskId: task.id }) }).catch(() => {})
+    }
     onUpdated({ ...task, ...updates, attachment_url, attachment_name })
     setSaving(false)
   }

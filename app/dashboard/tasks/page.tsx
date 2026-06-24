@@ -220,6 +220,7 @@ function TaskDetailModal({ task, profiles, departments, onClose, onUpdated, curr
     assignee_id: task.assignee_id || '',
     department_id: task.department_id || '',
     deadline: task.deadline ? task.deadline.split('T')[0] : '',
+    complete_on_upload: task.complete_on_upload || false,
   })
   const [saving, setSaving] = useState(false)
   const [attachFile, setAttachFile] = useState<File | null>(null)
@@ -246,6 +247,9 @@ function TaskDetailModal({ task, profiles, departments, onClose, onUpdated, curr
       ? { ...form, attachment_url, attachment_name, assignee_id: form.assignee_id || null, department_id: form.department_id || null, deadline: form.deadline || null }
       : { status: form.status }
     await supabase.from('tasks').update(updates).eq('id', task.id)
+    if (updates.status === 'done' && task.status !== 'done') {
+      fetch('/api/tasks/notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ taskId: task.id }) }).catch(() => {})
+    }
     onUpdated({ ...task, ...updates, attachment_url, attachment_name })
     setSaving(false)
   }

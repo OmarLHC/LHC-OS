@@ -34,3 +34,5 @@ export async function POST() {
   }
   return NextResponse.json({ results })
 }
+// Note: also run this in Supabase SQL editor:
+// ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS complete_on_upload boolean DEFAULT false;

@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const body = await request.json()
+  const body = await request.json() as any
 
   // Use service role to bypass RLS for the insert
   const adminSupabase = createClient(
@@ -25,6 +25,25 @@ export async function POST(request: Request) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 })
+  }
+
+  // Auto-complete linked task if complete_on_upload is set
+  if (body.task_id) {
+    const { data: task } = await adminSupabase
+      .from('tasks')
+      .select('id, status, complete_on_upload')
+      .eq('id', body.task_id)
+      .single()
+
+    if (task?.complete_on_upload && task.status !== 'done') {
+      await adminSupabase.from('tasks').update({ status: 'done' }).eq('id', task.id)
+      // Fire completion notification
+      fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL?.replace('supabase.co', 'vercel.app') || 'https://os.lhc-eg.com'}/api/tasks/notify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskId: task.id })
+      }).catch(() => {})
+    }
   }
 
   return NextResponse.json({ data })
