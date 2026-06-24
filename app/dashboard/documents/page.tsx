@@ -171,8 +171,13 @@ function UploadModal({ projects, tasks, profile, onClose, onUploaded }: any) {
     const { data: { user } } = await supabase.auth.getUser()
     const ext = file.name.split('.').pop()
     const path = `documents/${form.project_id}/${Date.now()}.${ext}`
-    const { error: upErr } = await supabase.storage.from('lhc-documents').upload(path, file)
-    if (upErr) { setError('Upload failed: ' + upErr.message); setLoading(false); return }
+    // Upload file via server route to bypass storage RLS
+    const fileFormData = new FormData()
+    fileFormData.append('file', file)
+    fileFormData.append('path', path)
+    const storageRes = await fetch('/api/documents/storage-upload', { method: 'POST', body: fileFormData })
+    const storageJson = await storageRes.json()
+    if (!storageRes.ok) { setError('Upload failed: ' + (storageJson.error || storageJson.message || 'Storage error')); setLoading(false); return }
     const uploadRes = await fetch('/api/documents/upload', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
