@@ -27,6 +27,7 @@ export default function ProjectPage() {
   const [view, setView] = useState<'kanban' | 'list' | 'gantt'>('kanban')
   const [showNewTask, setShowNewTask] = useState(false)
   const [selectedTask, setSelectedTask] = useState<any>(null)
+  const [showEditProject, setShowEditProject] = useState(false)
   const [newTaskCol, setNewTaskCol] = useState('todo')
   const [dragTask, setDragTask] = useState<string | null>(null)
   const supabase = createClient()
@@ -60,6 +61,12 @@ export default function ProjectPage() {
     if (data) setProject((p: any) => ({ ...p, progress: data.progress }))
   }
 
+  async function deleteProject() {
+    if (!confirm(`Delete "${project.name}" and all its tasks? This cannot be undone.`)) return
+    await supabase.from('projects').delete().eq('id', id)
+    router.push('/dashboard/projects')
+  }
+
   async function deleteTask(taskId: string) {
     if (!confirm('Delete this task?')) return
     await supabase.from('tasks').delete().eq('id', taskId)
@@ -90,6 +97,18 @@ export default function ProjectPage() {
             {project.client && <div style={{ color: '#888', fontSize: '14px', marginTop: '4px' }}>Client: {project.client}</div>}
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {(profile?.role === 'admin' || profile?.role === 'manager') && (<>
+              <button onClick={() => setShowEditProject(true)}
+                style={{ padding: '8px 16px', background: '#fff', border: '0.5px solid #E8E6E3', borderRadius: '8px',
+                  fontSize: '13px', fontWeight: 500, cursor: 'pointer', color: '#505151' }}>
+                Edit Project
+              </button>
+              <button onClick={deleteProject}
+                style={{ padding: '8px 16px', background: '#fff', border: '0.5px solid #FECACA', borderRadius: '8px',
+                  fontSize: '13px', fontWeight: 500, cursor: 'pointer', color: '#EF4444' }}>
+                Delete
+              </button>
+            </>)}
             <button onClick={() => { setNewTaskCol('todo'); setShowNewTask(true) }}
               style={{ padding: '8px 16px', background: '#FFCB1A', border: 'none', borderRadius: '8px',
                 fontSize: '13px', fontWeight: 700, cursor: 'pointer', color: '#000' }}>
@@ -275,6 +294,17 @@ export default function ProjectPage() {
       )}
 
       {/* New Task Modal */}
+      {showEditProject && project && (
+        <EditProjectModal
+          project={project}
+          departments={departments}
+          onClose={() => setShowEditProject(false)}
+          onSaved={(updated: any) => {
+            setProject((p: any) => ({ ...p, ...updated }))
+            setShowEditProject(false)
+          }}
+        />
+      )}
       {showNewTask && (
         <NewTaskModal
           projectId={id as string} defaultStatus={newTaskCol}
@@ -825,3 +855,122 @@ function TaskDetailModal({ task, profiles, departments, onClose, onUpdated, curr
   )
 }
 // rebuilt Tue Jun 23 14:04:04 UTC 2026
+
+function EditProjectModal({ project, departments, onClose, onSaved }: {
+  project: any, departments: any[], onClose: () => void, onSaved: (updated: any) => void
+}) {
+  const supabase = createClient()
+  const [loading, setLoading] = useState(false)
+  const [form, setForm] = useState({
+    name: project.name || '',
+    client: project.client || '',
+    description: project.description || '',
+    status: project.status || 'planning',
+    priority: project.priority || 'medium',
+    department_id: project.department_id || '',
+    deadline: project.deadline ? project.deadline.split('T')[0] : '',
+    start_date: project.start_date ? project.start_date.split('T')[0] : '',
+  })
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    const payload = {
+      name: form.name,
+      client: form.client || null,
+      description: form.description || null,
+      status: form.status,
+      priority: form.priority,
+      department_id: form.department_id || null,
+      deadline: form.deadline || null,
+      start_date: form.start_date || null,
+    }
+    await supabase.from('projects').update(payload).eq('id', project.id)
+    onSaved(payload)
+  }
+
+  const inputStyle = { width: '100%', padding: '9px 12px', border: '0.5px solid #E8E6E3', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' as const }
+  const labelStyle = { display: 'block' as const, fontSize: '12px', fontWeight: 500 as const, color: '#505151', marginBottom: '6px' }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex',
+      alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div style={{ background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '560px', maxHeight: '90vh', overflow: 'auto' }}>
+        <form onSubmit={save}>
+          {/* Header */}
+          <div style={{ padding: '24px 28px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Edit Project</h2>
+            <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: '#888' }}>×</button>
+          </div>
+
+          {/* Body */}
+          <div style={{ padding: '20px 28px' }}>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={labelStyle}>Project Name *</label>
+              <input required value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} style={inputStyle} />
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={labelStyle}>Client</label>
+              <input value={form.client} onChange={e => setForm(p => ({ ...p, client: e.target.value }))} placeholder="Client name" style={inputStyle} />
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={labelStyle}>Description</label>
+              <textarea rows={3} value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+                style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '16px' }}>
+              <div>
+                <label style={labelStyle}>Status</label>
+                <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))} style={inputStyle}>
+                  <option value="planning">Planning</option>
+                  <option value="active">Active</option>
+                  <option value="on_hold">On Hold</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Priority</label>
+                <select value={form.priority} onChange={e => setForm(p => ({ ...p, priority: e.target.value }))} style={inputStyle}>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Department</label>
+                <select value={form.department_id} onChange={e => setForm(p => ({ ...p, department_id: e.target.value }))} style={inputStyle}>
+                  <option value="">None</option>
+                  {departments.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Start Date</label>
+                <input type="date" value={form.start_date} onChange={e => setForm(p => ({ ...p, start_date: e.target.value }))} style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>Deadline</label>
+                <input type="date" value={form.deadline} onChange={e => setForm(p => ({ ...p, deadline: e.target.value }))} style={inputStyle} />
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div style={{ padding: '16px 28px', borderTop: '0.5px solid #E8E6E3', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            <button type="button" onClick={onClose}
+              style={{ padding: '9px 18px', border: '0.5px solid #E8E6E3', borderRadius: '8px', background: '#fff', fontSize: '14px', cursor: 'pointer' }}>
+              Cancel
+            </button>
+            <button type="submit" disabled={loading}
+              style={{ padding: '9px 24px', background: '#FFCB1A', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', color: '#000' }}>
+              {loading ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
