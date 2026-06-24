@@ -100,15 +100,15 @@ export default function ProjectPage() {
             {project.client && <div style={{ color: '#888', fontSize: '14px', marginTop: '4px' }}>Client: {project.client}</div>}
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <button onClick={() => setShowEditProject(true)}
+            <button onClick={() => setShowEditProject(true)} title="Edit this project"
               style={{ padding: '8px 16px', background: '#fff', border: '0.5px solid #E8E6E3', borderRadius: '8px',
                 fontSize: '13px', fontWeight: 500, cursor: 'pointer', color: '#505151' }}>
-              Edit Project
+              ✏️ Edit Project
             </button>
-            <button onClick={deleteProject}
+            <button onClick={deleteProject} title="Delete this project"
               style={{ padding: '8px 16px', background: '#fff', border: '0.5px solid #FECACA', borderRadius: '8px',
                 fontSize: '13px', fontWeight: 500, cursor: 'pointer', color: '#EF4444' }}>
-              Delete
+              🗑 Delete
             </button>
             <button onClick={() => { setNewTaskCol('todo'); setShowNewTask(true) }}
               style={{ padding: '8px 16px', background: '#FFCB1A', border: 'none', borderRadius: '8px',
