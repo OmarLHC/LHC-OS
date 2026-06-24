@@ -9,8 +9,8 @@ const CAT_LABELS: Record<string, string> = {
   rfi: 'RFI', warranty: 'Warranty', inspection: 'Inspection', report: 'Report', photo: 'Photo', other: 'Other'
 }
 const STATUS_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  pending:           { bg: '#FFF3CD', color: '#856404',  label: 'Pending Review' },
-  approved:          { bg: '#E1F5EE', color: '#0F6E56',  label: 'Approved' },
+  pending:           { bg: '#FFF3CD', color: '#856404',  label: '⏳ Pending Review' },
+  approved:          { bg: '#E1F5EE', color: '#0F6E56',  label: '✓ Approved' },
   revision_requested:{ bg: '#FDEDEC', color: '#C0392B',  label: 'Revision Needed' },
   sent_to_client:    { bg: '#E6F1FB', color: '#185FA5',  label: 'Sent to Client' },
 }
@@ -304,18 +304,30 @@ function DocDetailModal({ doc, isManagement, profile, onClose, onUpdated }: any)
     if (!clientEmail) return
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
-    const { data: urlData } = await supabase.storage.from('lhc-documents').createSignedUrl(doc.storage_path, 60 * 60 * 24)
+    // Get signed URL via server to bypass storage JWT issue
+    const urlRes = await fetch('/api/documents/signed-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ storagePath: doc.storage_path, expiresIn: 60 * 60 * 24 })
+    })
+    const urlJson = await urlRes.json()
     await fetch('/api/documents/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ documentId: doc.id, clientEmail, message: emailMessage, downloadUrl: urlData?.signedUrl, sentBy: user?.id })
+      body: JSON.stringify({ documentId: doc.id, clientEmail, message: emailMessage, downloadUrl: urlJson.signedUrl, sentBy: user?.id })
     })
     onUpdated()
   }
 
   async function getDownloadUrl() {
-    const { data } = await supabase.storage.from('lhc-documents').createSignedUrl(doc.storage_path, 60 * 60)
-    if (data?.signedUrl) window.open(data.signedUrl, '_blank')
+    const res = await fetch('/api/documents/signed-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ storagePath: doc.storage_path, expiresIn: 3600 })
+    })
+    const json = await res.json()
+    if (json.signedUrl) window.open(json.signedUrl, '_blank')
+    else alert('Download failed: ' + (json.error || 'Unknown error'))
   }
 
   return (
