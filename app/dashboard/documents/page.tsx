@@ -173,19 +173,24 @@ function UploadModal({ projects, tasks, profile, onClose, onUploaded }: any) {
     const path = `documents/${form.project_id}/${Date.now()}.${ext}`
     const { error: upErr } = await supabase.storage.from('lhc-documents').upload(path, file)
     if (upErr) { setError('Upload failed: ' + upErr.message); setLoading(false); return }
-    await supabase.from('documents').insert({
-      project_id: form.project_id,
-      task_id: form.task_id || null,
-      name: form.name,
-      description: form.description || null,
-      category: form.category,
-      file_name: file.name,
-      file_size: file.size,
-      file_type: file.type,
-      storage_path: path,
-      uploaded_by: user?.id,
-      status: 'pending'
+    const uploadRes = await fetch('/api/documents/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        project_id: form.project_id,
+        task_id: form.task_id || null,
+        name: form.name,
+        description: form.description || null,
+        category: form.category,
+        file_name: file.name,
+        file_size: file.size,
+        file_type: file.type,
+        storage_path: path,
+        status: 'pending'
+      })
     })
+    const uploadJson = await uploadRes.json()
+    if (!uploadRes.ok) { setError('Upload failed: ' + (uploadJson.error || 'Unknown error')); setLoading(false); return }
     onUploaded(); onClose()
   }
 
