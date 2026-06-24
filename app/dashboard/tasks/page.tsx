@@ -248,7 +248,7 @@ function TaskDetailModal({ task, profiles, departments, onClose, onUpdated, curr
       : { status: form.status }
     await supabase.from('tasks').update(updates).eq('id', task.id)
     if (updates.status === 'done' && task.status !== 'done') {
-      fetch('/api/tasks/notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ taskId: task.id }) }).catch(() => {})
+      fetch('/api/tasks/notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ taskId: task.id }) }).catch(console.error)
     }
     onUpdated({ ...task, ...updates, attachment_url, attachment_name })
     setSaving(false)

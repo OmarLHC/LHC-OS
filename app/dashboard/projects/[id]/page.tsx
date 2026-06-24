@@ -53,7 +53,7 @@ export default function ProjectPage() {
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus as any } : t))
     await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId)
     if (newStatus === 'done' && prevTask?.status !== 'done') {
-      fetch('/api/tasks/notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ taskId }) }).catch(() => {})
+      fetch('/api/tasks/notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ taskId }) }).catch(console.error)
     }
     // Refresh project to get updated progress
     const { data } = await supabase.from('projects').select('progress').eq('id', id).single()
@@ -649,7 +649,7 @@ function TaskDetailModal({ task, profiles, departments, onClose, onUpdated, curr
     await supabase.from('tasks').update(updates).eq('id', task.id)
     // Send completion notification if status changed to done
     if (updates.status === 'done' && task.status !== 'done') {
-      fetch('/api/tasks/notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ taskId: task.id }) }).catch(() => {})
+      fetch('/api/tasks/notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ taskId: task.id }) }).catch(console.error)
     }
     onUpdated({ ...task, ...updates, attachment_url, attachment_name })
     setSaving(false)
