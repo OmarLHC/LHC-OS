@@ -35,18 +35,21 @@ export default function ProjectPage() {
   useEffect(() => { if (id) load() }, [id])
 
   async function load() {
-    const [{ data: proj }, { data: taskData }, { data: memberData }, { data: profiles }, { data: depts }] = await Promise.all([
+    const { data: { user } } = await supabase.auth.getUser()
+    const [{ data: proj }, { data: taskData }, { data: memberData }, { data: profiles }, { data: depts }, { data: prof }] = await Promise.all([
       supabase.from('projects').select('*, department:departments(*), owner:profiles!owner_id(*)').eq('id', id).single(),
       supabase.from('tasks').select('*, assignee:profiles!assignee_id(id, full_name, avatar_url), department:departments(*)').eq('project_id', id).order('sort_order'),
       supabase.from('project_members').select('user:profiles!user_id(*)').eq('project_id', id),
       supabase.from('profiles').select('id, full_name, email, avatar_url').eq('is_active', true).order('full_name'),
       supabase.from('departments').select('*').order('name'),
+      supabase.from('profiles').select('role').eq('id', user!.id).single(),
     ])
     setProject(proj)
     setTasks(taskData || [])
     setMembers(memberData?.map((m: any) => m.user) || [])
     setAllProfiles((profiles || []) as any)
     setDepartments(depts || [])
+    setProfile(prof)
   }
 
   async function moveTask(taskId: string, newStatus: string) {
