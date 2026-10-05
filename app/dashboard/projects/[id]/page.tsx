@@ -66,8 +66,17 @@ export default function ProjectPage() {
 
   async function deleteProject() {
     if (!confirm(`Delete "${project.name}" and all its tasks? This cannot be undone.`)) return
-    await supabase.from('projects').delete().eq('id', id)
-    router.push('/dashboard/projects')
+    const res = await fetch('/api/projects/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectId: id })
+    })
+    if (res.ok) {
+      router.push('/dashboard/projects')
+    } else {
+      const err = await res.json()
+      alert('Delete failed: ' + (err.error || 'Unknown error'))
+    }
   }
 
   async function deleteTask(taskId: string) {
@@ -147,7 +156,11 @@ export default function ProjectPage() {
                 onChange={async e => {
                   const newStatus = e.target.value
                   setProject((p: any) => ({ ...p, status: newStatus }))
-                  await supabase.from('projects').update({ status: newStatus }).eq('id', id)
+                  fetch('/api/projects/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ projectId: id, payload: { status: newStatus } })
+                  })
                 }}
                 style={{ fontSize: '13px', fontWeight: 600, border: 'none', background: 'transparent',
                   cursor: 'pointer', padding: '0', outline: 'none', color: '#1A1A1A' }}>
@@ -886,8 +899,18 @@ function EditProjectModal({ project, departments, onClose, onSaved }: {
       deadline: form.deadline || null,
       start_date: form.start_date || null,
     }
-    await supabase.from('projects').update(payload).eq('id', project.id)
-    onSaved(payload)
+    const res = await fetch('/api/projects/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectId: project.id, payload })
+    })
+    if (res.ok) {
+      onSaved(payload)
+    } else {
+      const err = await res.json()
+      alert('Save failed: ' + (err.error || 'Unknown error'))
+      setLoading(false)
+    }
   }
 
   const inputStyle = { width: '100%', padding: '9px 12px', border: '0.5px solid #E8E6E3', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' as const }
